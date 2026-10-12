@@ -15,6 +15,7 @@ const HOTSPOT_SSID  = 'Pet_Hydration_Access_Point';
 const PORTAL_URL    = 'http://192.168.4.1';
 const POLL_MS       = 3_000;
 const POLL_LIMIT_MS = 120_000;
+const API_URL = 'http://192.168.1.185:8080';
 
 export default function AddDeviceScreen({ navigation }) {
   const [step, setStep]     = useState('hotspot');
@@ -255,12 +256,28 @@ function StepDots({ current }) {
   );
 }
 
+const getToken = () => null; // TODO
+
 async function pollPendingDevice() {
-  // TODO: GET /pending-devices 
-  return null;
+  const token = getToken();
+  const res = await fetch(`${API_URL}/pending-devices`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('poll failed');
+  const list = await res.json();
+  return list.length > 0 ? list[0].mac_address : null;
 }
 
 async function claimDevice(mac, name) {
-  // TODO: POST /pending-devices/claim
-  return null;
+  const token = getToken();
+  const res = await fetch(`${API_URL}/pending-devices/claim?user_id=1`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ mac_address: mac, name }),
+  });
+  if (!res.ok) throw new Error('claim failed');
+  return res.json();
 }
