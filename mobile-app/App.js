@@ -1,9 +1,9 @@
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AddDeviceScreen from './src/screens/AddDeviceScreen';
+import CalibrationScreen from './src/screens/CalibrationScreen';
 import { colors } from './src/theme';
 
 const Stack = createNativeStackNavigator();
@@ -38,6 +38,10 @@ export default function App() {
             name="AddDevice"
             component={AddDeviceScreen}
             options={{ title: 'Nowe poidło' }}
+          />
+          <Stack.Screen 
+            name="Calibration" 
+            component={CalibrationScreen} 
           />
         </Stack.Navigator>
       </NavigationContainer>

@@ -1,0 +1,223 @@
+import { useState, useEffect, useRef } from 'react';
+import {
+  View, Text, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity,
+  KeyboardAvoidingView, Platform, ScrollView 
+} from 'react-native';
+import { colors } from '../theme';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+const TARE_POLL_MS    = 3_000;
+const TARE_TIMEOUT_MS = 30_000;
+
+export default function CalibrationScreen({ route, navigation }) {
+  const { deviceId, userId = 1 } = route.params;
+  const [step, setStep] = useState('tare');
+  const [tareError, setTareError] = useState(null);
+  const [capacity, setCapacity] = useState('');
+  const [petName, setPetName] = useState('');
+  const [petWeight, setPetWeight] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const pollRef  = useRef(null);
+  const timerRef = useRef(null);
+
+  async function startTare() {
+    setTareError(null);
+    setStep('tare_wait');
+
+    await fetch(`${API_URL}/devices/${deviceId}/tare?user_id=${userId}`, { method: 'POST' });
+
+    const before = await fetchLatestWeight();
+
+    const deadline = Date.now() + TARE_TIMEOUT_MS;
+
+    pollRef.current = setInterval(async () => {
+      if (Date.now() > deadline) {
+        clearInterval(pollRef.current);
+        setTareError('Nie udało się wykonać tare. Spróbuj ponownie.');
+        setStep('tare');
+        return;
+      }
+      const after = await fetchLatestWeight();
+      if (after && after.id !== before?.id) {
+        clearInterval(pollRef.current);
+        setStep('capacity');
+      }
+    }, TARE_POLL_MS);
+  }
+
+  async function fetchLatestWeight() {
+    try {
+      const res = await fetch(`${API_URL}/devices/${deviceId}/readings/latest?user_id=${userId}`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  }
+
+  useEffect(() => () => {
+    clearInterval(pollRef.current);
+    clearTimeout(timerRef.current);
+  }, []);
+
+  async function saveCapacity() {
+    const ml = parseInt(capacity, 10);
+    if (!ml || ml <= 0) { setError('Podaj prawidłową pojemność'); return; }
+    setError(null);
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/devices/${deviceId}?user_id=${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bowl_capacity_ml: ml }),
+      });
+      if (!res.ok) throw new Error();
+      setStep('pet');
+    } catch {
+      setError('Błąd zapisu. Spróbuj ponownie.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function savePet() {
+    if (!petName.trim()) { setError('Podaj imię zwierzęcia'); return; }
+    setError(null);
+    setSaving(true);
+    try {
+      const body = { name: petName.trim() };
+      const weight = parseFloat(petWeight.replace(',', '.'));
+      if (isNaN(weight) || weight <= 0) {
+        setError('Podaj prawidłową wagę'); 
+        setSaving(false);
+        return; 
+      } else {
+        body.weight_kg = weight;
+      }
+
+      const res = await fetch(`${API_URL}/devices/${deviceId}/pet?user_id=${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error();
+      navigation.replace('Home', { deviceId, userId });
+    } catch {
+      setError('Błąd zapisu. Spróbuj ponownie.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={s.screen}>
+
+          {step === 'tare' && (
+            <View style={s.card}>
+              <Text style={s.title}>Krok 1 z 3</Text>
+              <Text style={s.heading}>Zerowanie wagi</Text>
+              <Text style={s.body}>
+                Połóż pustą miskę na wadze i naciśnij przycisk. Urządzenie wyzeruje wagę miski.
+              </Text>
+              {tareError && <Text style={s.error}>{tareError}</Text>}
+              <TouchableOpacity style={s.btn} onPress={startTare}>
+                <Text style={s.btnText}>Wykonaj Tare</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {step === 'tare_wait' && (
+            <View style={s.card}>
+              <ActivityIndicator size="large" color={colors.accent} />
+              <Text style={s.heading}>Oczekiwanie na urządzenie…</Text>
+              <Text style={s.body}>Nie ruszaj miski.</Text>
+            </View>
+          )}
+
+          {step === 'capacity' && (
+            <View style={s.card}>
+              <Text style={s.title}>Krok 2 z 3</Text>
+              <Text style={s.heading}>Pojemność miski</Text>
+              <Text style={s.body}>Podaj maksymalną pojemność miski w mililitrach.</Text>
+              <TextInput
+                style={s.input}
+                placeholder="np. 500"
+                placeholderTextColor={colors.muted}
+                keyboardType="numeric"
+                value={capacity}
+                onChangeText={setCapacity}
+              />
+              {error && <Text style={s.error}>{error}</Text>}
+              <TouchableOpacity style={s.btn} onPress={saveCapacity} disabled={saving}>
+                <Text style={s.btnText}>{saving ? 'Zapisywanie…' : 'Dalej'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {step === 'pet' && (
+            <View style={s.card}>
+              <Text style={s.title}>Krok 3 z 3</Text>
+              <Text style={s.heading}>Dane zwierzęcia</Text>
+              <TextInput
+                style={s.input}
+                placeholder="Imię zwierzęcia"
+                placeholderTextColor={colors.muted}
+                value={petName}
+                onChangeText={setPetName}
+              />
+              <TextInput
+                style={s.input}
+                placeholder="Waga zwierzęcia w kg (opcjonalnie)"
+                placeholderTextColor={colors.muted}
+                keyboardType="decimal-pad"
+                value={petWeight}
+                onChangeText={setPetWeight}
+              />
+              {error && <Text style={s.error}>{error}</Text>}
+              <TouchableOpacity style={s.btn} onPress={savePet} disabled={saving}>
+                <Text style={s.btnText}>{saving ? 'Zapisywanie…' : 'Gotowe'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  card:    { backgroundColor: colors.panel, borderRadius: 16, padding: 24, gap: 16 },
+  title:   { color: colors.muted, fontSize: 13 },
+  heading: { color: colors.text, fontSize: 22, fontWeight: '700' },
+  body:    { color: colors.muted, fontSize: 15, lineHeight: 22 },
+  input: {
+    backgroundColor: colors.bg,
+    borderRadius: 10,
+    padding: 14,
+    color: colors.text,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: colors.muted + '40',
+  },
+  btn: {
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    padding: 16,
+    alignItems: 'center',
+  },
+  btnText: { color: colors.bg, fontSize: 16, fontWeight: '700' },
+  error:   { color: colors.bad, fontSize: 14 },
+});
