@@ -15,7 +15,7 @@ const HOTSPOT_SSID  = 'Pet_Hydration_Access_Point';
 const PORTAL_URL    = 'http://192.168.4.1';
 const POLL_MS       = 3_000;
 const POLL_LIMIT_MS = 120_000;
-const API_URL = 'http://192.168.1.185:8080';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function AddDeviceScreen({ navigation }) {
   const [step, setStep]     = useState('hotspot');
@@ -23,6 +23,10 @@ export default function AddDeviceScreen({ navigation }) {
   const [name, setName]     = useState('');
   const [error, setError]   = useState(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    checkIncompleteDevice(navigation);
+  }, []);
 
   const pollRef  = useRef(null);
   const startRef = useRef(0);
@@ -36,6 +40,7 @@ export default function AddDeviceScreen({ navigation }) {
     startRef.current = Date.now();
 
     pollRef.current = setInterval(async () => {
+      if (!pollRef.current) return;
       if (Date.now() - startRef.current > POLL_LIMIT_MS) {
         stopPoll();
         setError('Nie wykryto urządzenia w ciągu 2 minut. Zacznij od nowa.');
@@ -83,6 +88,7 @@ export default function AddDeviceScreen({ navigation }) {
         {step === 'hotspot' && <StepHotspot onNext={() => setStep('portal')} />}
         {step === 'portal'  && <StepPortal  onNext={startPoll} onBack={() => setStep('hotspot')} />}
         {step === 'waiting' && <StepWaiting onCancel={() => { stopPoll(); setStep('hotspot'); }} />}
+        {step === 'timeout' && <StepTimeout onRetry={() => setStep('hotspot')} />}
         {step === 'name'    && (
           <StepName
             mac={mac}
@@ -172,6 +178,22 @@ function StepWaiting({ onCancel }) {
       <Note text="Zielona dioda na urządzeniu - ESP32 połączył się z siecią." />
       <View style={{ marginTop: 32 }}>
         <Button title="Anuluj" variant="text" onPress={onCancel} />
+      </View>
+    </>
+  );
+}
+
+function StepTimeout({ onRetry }) {
+  return (
+    <>
+      <Header
+        icon="time-outline"
+        title="Nie wykryto urządzenia"
+        body="Upłynął limit 2 minut. Upewnij się, że urządzenie jest włączone i zostało poprawnie skonfigurowane."
+      />
+      <Note text="Sprawdź czy dioda na ESP32 miga — miganie oznacza tryb konfiguracji WiFi." />
+      <View style={{ marginTop: 32, gap: 4 }}>
+        <Button title="Spróbuj ponownie" onPress={onRetry} />
       </View>
     </>
   );
@@ -280,4 +302,21 @@ async function claimDevice(mac, name) {
   });
   if (!res.ok) throw new Error('claim failed');
   return res.json();
+}
+
+async function checkIncompleteDevice(navigation) {
+  try {
+    const res = await fetch(`${API_URL}/devices?user_id=1`);
+    if (!res.ok) return;
+    const devices = await res.json();
+    const incomplete = devices.find(
+      (d) => !d.bowl_capacity_ml || d.bowl_capacity_ml === 0
+    );
+    if (incomplete) {
+      navigation.replace('Calibration', {
+        deviceId: incomplete.id,
+        deviceName: incomplete.name,
+      });
+    }
+  } catch {}
 }
