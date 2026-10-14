@@ -66,8 +66,8 @@ export default function AddDeviceScreen({ navigation }) {
     setSaving(true);
     setError(null);
     try {
-      await claimDevice(mac, trimmed);
-      navigation.replace('Calibration', { deviceId: mac, deviceName: trimmed });
+      const device = await claimDevice(mac, trimmed);
+      navigation.replace('Calibration', { deviceId: device.id, deviceName: trimmed });
     } catch {
       setError('Nie udało się połączyć z urządzeniem.');
       setSaving(false);
@@ -219,7 +219,7 @@ function StepName({ mac, name, onChangeName, error, saving, onSave, onBack }) {
         onChangeText={onChangeName}
         autoFocus
         autoCapitalize="words"
-        placeholder="np. Burek"
+        placeholder="np. Miska Maksa"
       />
       {error && (
         <Text style={{ color: colors.bad, marginBottom: 8, marginLeft: 4 }}>{error}</Text>
