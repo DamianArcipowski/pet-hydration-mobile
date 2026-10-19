@@ -9,6 +9,8 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const TARE_POLL_MS    = 3_000;
 const TARE_TIMEOUT_MS = 30_000;
+const BOWL_MIN_G = 30;
+const SCALE_NOISE_G = 5;
 
 export default function CalibrationScreen({ route, navigation }) {
   const { deviceId, userId = 1 } = route.params;
@@ -25,6 +27,18 @@ export default function CalibrationScreen({ route, navigation }) {
 
   async function startTare() {
     setTareError(null);
+
+    const latest = await fetchLatestWeight();
+    if (!latest) {
+      setTareError('Brak połączenia z urządzeniem. Odczekaj chwilę i spróbuj ponownie.');
+      return;
+    }
+
+    if (latest.weight_g < BOWL_MIN_G) {
+      setTareError('Połóż pustą miskę na wadze przed tarowaniem.');
+      return;
+    }
+
     setStep('tare_wait');
 
     await fetch(`${API_URL}/devices/${deviceId}/tare?user_id=${userId}`, { method: 'POST' });
@@ -89,12 +103,13 @@ export default function CalibrationScreen({ route, navigation }) {
     setSaving(true);
     try {
       const body = { name: petName.trim() };
-      const weight = parseFloat(petWeight.replace(',', '.'));
-      if (isNaN(weight) || weight <= 0) {
-        setError('Podaj prawidłową wagę'); 
-        setSaving(false);
-        return; 
-      } else {
+      if (petWeight.trim()) {
+        const weight = parseFloat(petWeight.replace(',', '.'));
+        if (isNaN(weight) || weight <= 0) {
+          setError('Podaj prawidłową wagę'); 
+          setSaving(false);
+          return; 
+        } 
         body.weight_kg = weight;
       }
 
