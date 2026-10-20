@@ -30,12 +30,12 @@ export default function CalibrationScreen({ route, navigation }) {
 
     const latest = await fetchLatestWeight();
     if (!latest) {
-      setTareError('Brak połączenia z urządzeniem. Odczekaj chwilę i spróbuj ponownie.');
+      setTareError('Brak połączenia z urządzeniem. Odczekaj 5 sekund i spróbuj ponownie.');
       return;
     }
 
     if (latest.weight_g < BOWL_MIN_G) {
-      setTareError('Połóż pustą miskę na wadze przed tarowaniem.');
+      setTareError('Połóż pustą miskę na wadze przed tarowaniem i odczekaj 5 sekund.');
       return;
     }
 
@@ -50,7 +50,7 @@ export default function CalibrationScreen({ route, navigation }) {
     pollRef.current = setInterval(async () => {
       if (Date.now() > deadline) {
         clearInterval(pollRef.current);
-        setTareError('Nie udało się wykonać tare. Spróbuj ponownie.');
+        setTareError('Nie udało się wykonać tare. Odczekaj 5 sekund i spróbuj ponownie.');
         setStep('tare');
         return;
       }
@@ -167,7 +167,7 @@ export default function CalibrationScreen({ route, navigation }) {
               <Text style={s.body}>Podaj maksymalną pojemność miski w mililitrach.</Text>
               <TextInput
                 style={s.input}
-                placeholder="np. 500"
+                placeholder="np. 300"
                 placeholderTextColor={colors.muted}
                 keyboardType="numeric"
                 value={capacity}

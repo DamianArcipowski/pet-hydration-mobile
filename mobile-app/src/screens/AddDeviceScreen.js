@@ -123,7 +123,7 @@ function StepHotspot({ onNext }) {
       </Panel>
       <Note text="Sieć może nie mieć dostępu do internetu - to normalne. Wróć do aplikacji po połączeniu." />
       <View style={{ marginTop: 24, gap: 4 }}>
-        <Button title="Połączono — dalej" onPress={onNext} />
+        <Button title="Połączono - dalej" onPress={onNext} />
       </View>
     </>
   );
