@@ -23,12 +23,43 @@ const navTheme = {
   },
 };
 
+// temporary
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const USER_ID = 1;
+
 export default function App() {
+  // temporary solution to skip device configuration, later will be replaced with authentication system 
+  const [startDeviceId, setStartDeviceId] = useState(undefined);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/devices?user_id=${USER_ID}`);
+        const devices = res.ok ? await res.json() : [];
+        setStartDeviceId(devices.length > 0 ? devices[0].id : null);
+      } catch {
+        setStartDeviceId(null);
+      }
+    })();
+  }, []);
+
+  if (startDeviceId === undefined) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
       <NavigationContainer theme={navTheme}>
         <Stack.Navigator
+          initialRouteName={startDeviceId ? 'Home' : 'AddDevice'} // temporary
           screenOptions={{
             headerStyle:      { backgroundColor: colors.bg },
             headerTintColor:  colors.text,
@@ -46,9 +77,16 @@ export default function App() {
             name="Calibration" 
             component={CalibrationScreen} 
           />
-          <Stack.Screen 
+          {/*<Stack.Screen 
             name="Home" 
             component={HomeScreen} 
+          />*/}
+          {/* temporary */}
+           <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+            initialParams={startDeviceId ? { deviceId: startDeviceId, userId: USER_ID } : undefined}
+            options={{ headerShown: false }}
           />
           <Stack.Screen 
             name="Stats" 
