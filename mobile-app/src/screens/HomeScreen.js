@@ -121,7 +121,7 @@ export default function HomeScreen({ route, navigation }) {
         <Text style={s.cardLabel}>Spożycie wody dziś</Text>
         <Text style={s.intakeValue}>
           {intake}
-          <Text style={s.intakeUnit}> g</Text>
+          <Text style={s.intakeUnit}> ml</Text>
         </Text>
       </Panel>
 
@@ -129,7 +129,7 @@ export default function HomeScreen({ route, navigation }) {
         <Text style={s.cardLabel}>Poziom wody w misce</Text>
         <WaterBar pct={waterPct} />
         <View style={s.waterMeta}>
-          <Text style={s.waterVal}>{Math.round(reading?.weight_g ?? 0)} g</Text>
+          <Text style={s.waterVal}>{Math.round(reading?.weight_g ?? 0)} ml</Text>
           <Text style={s.waterPct}>{Math.round(waterPct * 100)}%</Text>
         </View>
         <View style={s.statusRow}>
