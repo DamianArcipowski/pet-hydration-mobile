@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,9 +14,11 @@ import { colors } from '../theme';
 
 const API_URL  = process.env.EXPO_PUBLIC_API_URL;
 const SCREEN_W = Dimensions.get('window').width;
-const CHART_W  = SCREEN_W - 40 - 32;
+const CHART_W  = SCREEN_W - 40 - 32; 
 const CHART_H  = 120;
 const LABEL_W  = 36;
+const TIP_W    = 84;
+const TIP_H    = 36;
 const ML_PER_KG_PER_DAY = 50;
 
 const PERIODS = [
@@ -101,10 +104,12 @@ export default function StatsScreen({ route }) {
         ) : (
           <>
             <BarChart
+              key={`intake-${period}`}
               data={intake.data}
               color={colors.accent}
               labelStep={LABEL_STEP[period]}
               goalLine={goalLine}
+              formatValue={(v) => `${v} ml`}
             />
             {period !== 'day' && (
               goalLine != null ? (
@@ -133,9 +138,11 @@ export default function StatsScreen({ route }) {
           <EmptyChart />
         ) : (
           <BarChart
+            key={`weight-${period}`}
             data={petWeight.data}
             color={colors.warn}
             labelStep={LABEL_STEP[period]}
+            formatValue={(v) => `${v} kg`}
           />
         )}
       </Panel>
@@ -143,10 +150,29 @@ export default function StatsScreen({ route }) {
   );
 }
 
-function BarChart({ data, color, labelStep, goalLine = null }) {
+function BarChart({ data, color, labelStep, goalLine = null, formatValue }) {
+  const [selected, setSelected] = useState(null);
+
   const values = data.map((d) => d.value ?? 0);
   const maxVal = Math.max(...values, goalLine ?? 0, 1);
   const barW   = CHART_W / data.length;
+  const barH   = (v) => (v ? Math.max((v / maxVal) * CHART_H, 2) : 0);
+
+  let tip = null;
+  if (selected != null) {
+    const d      = data[selected];
+    const center = selected * barW + barW / 2;
+    const hour = /^(\d{2}):00$/.exec(d.label);
+    const label = hour
+      ? `${d.label}–${String((+hour[1] + 1) % 24).padStart(2, '0')}:00`
+      : d.label;
+    tip = {
+      label,
+      text:   d.value ? formatValue(d.value) : 'brak',
+      left:   Math.min(Math.max(center - TIP_W / 2, 0), CHART_W - TIP_W),
+      bottom: Math.min(barH(d.value) + 6, CHART_H + 10 - TIP_H),
+    };
+  }
 
   return (
     <View>
@@ -156,18 +182,33 @@ function BarChart({ data, color, labelStep, goalLine = null }) {
         )}
         <View style={s.barsRow}>
           {data.map((d, i) => (
-            <View key={i} style={[s.barCol, { width: barW }]}>
+            <Pressable
+              key={i}
+              style={[s.barCol, { width: barW }]}
+              onPress={() => setSelected(selected === i ? null : i)}
+            >
               {!!d.value && (
                 <View
                   style={[
                     s.bar,
-                    { height: Math.max((d.value / maxVal) * CHART_H, 2), backgroundColor: color },
+                    {
+                      height: barH(d.value),
+                      backgroundColor: color,
+                      opacity: selected == null || selected === i ? 1 : 0.4,
+                    },
                   ]}
                 />
               )}
-            </View>
+            </Pressable>
           ))}
         </View>
+
+        {tip && (
+          <View pointerEvents="none" style={[s.tip, { left: tip.left, bottom: tip.bottom }]}>
+            <Text style={s.tipLabel}>{tip.label}</Text>
+            <Text style={s.tipValue}>{tip.text}</Text>
+          </View>
+        )}
       </View>
 
       <View style={s.labelsRow}>
@@ -212,9 +253,13 @@ const s = StyleSheet.create({
   loader:     { marginVertical: 40 },
 
   chartArea:  { height: CHART_H + 10, justifyContent: 'flex-end', position: 'relative' },
-  barsRow:    { flexDirection: 'row', alignItems: 'flex-end' },
-  barCol:     { alignItems: 'center', justifyContent: 'flex-end' },
+  barsRow:    { flexDirection: 'row', alignItems: 'flex-end', height: CHART_H + 10 },
+  barCol:     { height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
   bar:        { width: '70%', borderRadius: 3, minWidth: 2 },
+
+  tip:        { position: 'absolute', width: TIP_W, height: TIP_H, borderRadius: 8, backgroundColor: 'rgba(14,17,22,0.85)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  tipLabel:   { color: colors.muted, fontSize: 10 },
+  tipValue:   { color: colors.text, fontSize: 12, fontWeight: '700' },
 
   labelsRow:  { height: 16, marginTop: 4, position: 'relative' },
   barLabel:   { position: 'absolute', width: LABEL_W, color: colors.muted, fontSize: 10, textAlign: 'center' },
