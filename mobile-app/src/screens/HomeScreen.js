@@ -171,7 +171,7 @@ export default function HomeScreen({ route, navigation }) {
         <Tile
           icon="list-outline"
           label="Moje urządzenia"
-          onPress={() => navigation.navigate('DeviceList', { userId })}
+          onPress={() => navigation.navigate('DeviceList', { userId, deviceId })}
         />
       </View>
 

@@ -8,6 +8,7 @@ import AddDeviceScreen from './src/screens/AddDeviceScreen';
 import CalibrationScreen from './src/screens/CalibrationScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import StatsScreen from './src/screens/StatsScreen';
+import DeviceListScreen from './src/screens/DeviceListScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -91,6 +92,11 @@ export default function App() {
           <Stack.Screen 
             name="Stats" 
             component={StatsScreen} 
+          />
+          <Stack.Screen
+            name="DeviceList"
+            component={DeviceListScreen}
+            options={{ title: 'Moje urządzenia' }}
           />
         </Stack.Navigator>
       </NavigationContainer>
