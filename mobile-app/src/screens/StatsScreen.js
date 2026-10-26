@@ -9,10 +9,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
 import { Panel } from '../components/ui';
 import { colors } from '../theme';
+import { API_URL, apiFetch } from '../api';
 
-const API_URL  = process.env.EXPO_PUBLIC_API_URL;
 const SCREEN_W = Dimensions.get('window').width;
 const CHART_W  = SCREEN_W - 40 - 32; 
 const CHART_H  = 120;
@@ -30,7 +31,7 @@ const PERIODS = [
 const LABEL_STEP = { day: 6, week: 1, month: 7 };
 
 export default function StatsScreen({ route }) {
-  const { deviceId, userId = 1 } = route.params ?? {};
+  const { deviceId } = route.params ?? {};
 
   const [period, setPeriod]       = useState('day');
   const [intake, setIntake]       = useState(null);
@@ -42,7 +43,7 @@ export default function StatsScreen({ route }) {
   const loadIntake = useCallback(async () => {
     setLoadingI(true);
     try {
-      const res = await fetch(`${API_URL}/devices/${deviceId}/readings/intake?period=${period}`);
+      const res = await apiFetch(`${API_URL}/devices/${deviceId}/readings/intake?period=${period}`);
       setIntake(res.ok ? await res.json() : null);
     } catch { setIntake(null); }
     finally { setLoadingI(false); }
@@ -52,8 +53,8 @@ export default function StatsScreen({ route }) {
     setLoadingW(true);
     try {
       const [histRes, petRes] = await Promise.all([
-        fetch(`${API_URL}/devices/${deviceId}/pet/weight/history?period=${period}`),
-        fetch(`${API_URL}/devices/${deviceId}/pet?user_id=${userId}`),
+        apiFetch(`${API_URL}/devices/${deviceId}/pet/weight/history?period=${period}`),
+        apiFetch(`${API_URL}/devices/${deviceId}/pet`),
       ]);
       setPetWeight(histRes.ok ? await histRes.json() : null);
       if (petRes.ok) {
@@ -64,7 +65,7 @@ export default function StatsScreen({ route }) {
       }
     } catch { setPetWeight(null); setLatestKg(null); }
     finally { setLoadingW(false); }
-  }, [deviceId, userId, period]);
+  }, [deviceId, period]);
 
   useEffect(() => {
     loadIntake();

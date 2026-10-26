@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Linking,
@@ -8,14 +8,15 @@ import {
   Text,
   View,
 } from 'react-native';
+
 import { Button, Field, Panel } from '../components/ui';
 import { colors } from '../theme';
+import { API_URL, apiFetch } from '../api';
 
 const HOTSPOT_SSID  = 'Pet_Hydration_Access_Point';
 const PORTAL_URL    = 'http://192.168.4.1';
 const POLL_MS       = 3_000;
 const POLL_LIMIT_MS = 120_000;
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function AddDeviceScreen({ navigation }) {
   const [step, setStep]     = useState('hotspot');
@@ -282,7 +283,7 @@ const getToken = () => null; // TODO
 
 async function pollPendingDevice() {
   const token = getToken();
-  const res = await fetch(`${API_URL}/pending-devices`, {
+  const res = await apiFetch(`${API_URL}/pending-devices`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('poll failed');
@@ -292,7 +293,7 @@ async function pollPendingDevice() {
 
 async function claimDevice(mac, name) {
   const token = getToken();
-  const res = await fetch(`${API_URL}/pending-devices/claim?user_id=1`, {
+  const res = await apiFetch(`${API_URL}/pending-devices/claim`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -306,7 +307,7 @@ async function claimDevice(mac, name) {
 
 async function checkIncompleteDevice(navigation) {
   try {
-    const res = await fetch(`${API_URL}/devices?user_id=1`);
+    const res = await apiFetch(`${API_URL}/devices`);
     if (!res.ok) return;
     const devices = await res.json();
     const incomplete = devices.find(

@@ -10,13 +10,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
 import { Button } from '../components/ui';
 import { colors } from '../theme';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { API_URL, apiFetch } from '../api';
+import { useAuth } from '../auth';
 
 export default function DeviceListScreen({ route, navigation }) {
-  const { userId = 1, deviceId: currentId } = route.params ?? {};
+  const { deviceId: currentId } = route.params ?? {};
+  const { signOut } = useAuth();
 
   const [devices, setDevices]       = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -26,7 +28,7 @@ export default function DeviceListScreen({ route, navigation }) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/devices?user_id=${userId}`);
+      const res = await apiFetch(`${API_URL}/devices`);
       if (!res.ok) throw new Error();
       setDevices(await res.json());
     } catch {
@@ -34,7 +36,7 @@ export default function DeviceListScreen({ route, navigation }) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -47,7 +49,7 @@ export default function DeviceListScreen({ route, navigation }) {
   function openDevice(id) {
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Home', params: { deviceId: id, userId } }],
+      routes: [{ name: 'Home', params: { deviceId: id } }],
     });
   }
 
@@ -96,6 +98,7 @@ export default function DeviceListScreen({ route, navigation }) {
 
       <View style={s.footer}>
         <Button title="Dodaj nowe urządzenie" onPress={() => navigation.navigate('AddDevice')} />
+        <Button variant="text" title="Wyloguj się" onPress={signOut} />
       </View>
     </View>
   );
@@ -114,5 +117,5 @@ const s = StyleSheet.create({
   mac:         { color: colors.muted, fontSize: 12, fontFamily: 'monospace' },
   activeBadge: { color: colors.accent, fontSize: 12, fontWeight: '600' },
 
-  footer:      { padding: 20, paddingTop: 0 },
+  footer:      { padding: 20, paddingTop: 0, gap: 4 },
 });

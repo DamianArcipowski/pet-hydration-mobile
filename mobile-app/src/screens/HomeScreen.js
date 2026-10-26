@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Modal,
   RefreshControl,
@@ -10,14 +10,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
 import { Panel } from '../components/ui';
 import { colors } from '../theme';
+import { API_URL, apiFetch } from '../api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const POLL_MS = 10_000;
 
 export default function HomeScreen({ route, navigation }) {
-  const { deviceId, userId = 1 } = route.params ?? {};
+  const { deviceId } = route.params ?? {};
 
   const [device, setDevice]   = useState(null);
   const [pet, setPet]         = useState(null);
@@ -33,10 +34,10 @@ export default function HomeScreen({ route, navigation }) {
   const load = useCallback(async () => {
     try {
       const [devRes, petRes, readRes, intakeRes] = await Promise.all([
-        fetch(`${API_URL}/devices?user_id=${userId}`),
-        fetch(`${API_URL}/devices/${deviceId}/pet?user_id=${userId}`),
-        fetch(`${API_URL}/devices/${deviceId}/readings/latest`),
-        fetch(`${API_URL}/devices/${deviceId}/readings/intake/today`),
+        apiFetch(`${API_URL}/devices`),
+        apiFetch(`${API_URL}/devices/${deviceId}/pet`),
+        apiFetch(`${API_URL}/devices/${deviceId}/readings/latest`),
+        apiFetch(`${API_URL}/devices/${deviceId}/readings/intake/today`),
       ]);
 
       if (devRes.ok) {
@@ -50,7 +51,7 @@ export default function HomeScreen({ route, navigation }) {
         setIntake(data.total_ml ?? 0);
       }
     } catch {}
-  }, [deviceId, userId]);
+  }, [deviceId]);
 
   useEffect(() => {
     load();
@@ -81,8 +82,8 @@ export default function HomeScreen({ route, navigation }) {
     }
     setSaving(true);
     try {
-      const res = await fetch(
-        `${API_URL}/devices/${deviceId}/pet/weight?user_id=${userId}`,
+      const res = await apiFetch(
+        `${API_URL}/devices/${deviceId}/pet/weight`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -161,17 +162,17 @@ export default function HomeScreen({ route, navigation }) {
         <Tile
           icon="stats-chart-outline"
           label="Statystyki"
-          onPress={() => navigation.navigate('Stats', { deviceId, userId })}
+          onPress={() => navigation.navigate('Stats', { deviceId })}
         />
         <Tile
           icon="settings-outline"
           label="Konfiguracja"
-          onPress={() => navigation.navigate('DeviceSettings', { deviceId, userId })}
+          onPress={() => navigation.navigate('DeviceSettings', { deviceId })}
         />
         <Tile
           icon="list-outline"
           label="Moje urządzenia"
-          onPress={() => navigation.navigate('DeviceList', { userId, deviceId })}
+          onPress={() => navigation.navigate('DeviceList', { deviceId })}
         />
       </View>
 

@@ -3,14 +3,13 @@ import {
   View, Text, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView 
 } from 'react-native';
-import { colors } from '../theme';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { colors } from '../theme';
+import { API_URL, apiFetch } from '../api';
 
 const TARE_POLL_MS    = 3_000;
 const TARE_TIMEOUT_MS = 30_000;
 const BOWL_MIN_G = 30;
-const SCALE_NOISE_G = 5;
 
 export default function CalibrationScreen({ route, navigation }) {
   const { deviceId, userId = 1 } = route.params;
@@ -41,7 +40,7 @@ export default function CalibrationScreen({ route, navigation }) {
 
     setStep('tare_wait');
 
-    await fetch(`${API_URL}/devices/${deviceId}/tare?user_id=${userId}`, { method: 'POST' });
+    await apiFetch(`${API_URL}/devices/${deviceId}/tare`, { method: 'POST' });
 
     const before = await fetchLatestWeight();
 
@@ -64,7 +63,7 @@ export default function CalibrationScreen({ route, navigation }) {
 
   async function fetchLatestWeight() {
     try {
-      const res = await fetch(`${API_URL}/devices/${deviceId}/readings/latest?user_id=${userId}`);
+      const res = await apiFetch(`${API_URL}/devices/${deviceId}/readings/latest`);
       if (!res.ok) return null;
       return res.json();
     } catch {
@@ -83,7 +82,7 @@ export default function CalibrationScreen({ route, navigation }) {
     setError(null);
     setSaving(true);
     try {
-      const res = await fetch(`${API_URL}/devices/${deviceId}?user_id=${userId}`, {
+      const res = await apiFetch(`${API_URL}/devices/${deviceId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bowl_capacity_ml: ml }),
@@ -113,7 +112,7 @@ export default function CalibrationScreen({ route, navigation }) {
         body.weight_kg = weight;
       }
 
-      const res = await fetch(`${API_URL}/devices/${deviceId}/pet?user_id=${userId}`, {
+      const res = await apiFetch(`${API_URL}/devices/${deviceId}/pet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
