@@ -14,6 +14,7 @@ import CalibrationScreen from './src/screens/CalibrationScreen';
 import DeviceListScreen from './src/screens/DeviceListScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import StatsScreen from './src/screens/StatsScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -109,7 +110,14 @@ export default function App() {
             }}
           >
             {!token ? (
-              <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+               <>
+                <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="ForgotPassword"
+                  component={ForgotPasswordScreen}
+                  options={{ title: 'Reset hasła' }}
+                />
+              </>
             ) : (
               <>
                 <Stack.Screen

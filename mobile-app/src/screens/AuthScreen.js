@@ -15,7 +15,7 @@ import { API_URL, apiFetch } from '../api';
 
 const PASSWORD_MIN_LEN = 8;
 
-export default function AuthScreen() {
+export default function AuthScreen({ navigation }) {
   const { signIn } = useAuth();
 
   const [mode, setMode]         = useState('login');
@@ -131,6 +131,14 @@ export default function AuthScreen() {
             onPress={switchMode}
             disabled={loading}
           />
+          {!isRegister && (
+            <Button
+              variant="text"
+              title="Nie pamiętasz hasła?"
+              onPress={() => navigation.navigate('ForgotPassword', { email: email.trim().toLowerCase() })}
+              disabled={loading}
+            />
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
