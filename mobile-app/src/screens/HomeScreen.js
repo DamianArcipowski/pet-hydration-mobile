@@ -66,8 +66,12 @@ export default function HomeScreen({ route, navigation }) {
     setRefreshing(false);
   };
 
+  const calibrated  = reading?.calibrated === 1;
+  const bowlMissing = !!reading && !calibrated && device?.bowl_weight_g > 0 && reading.weight_g === 0;
+  const waterMl     = calibrated ? reading.weight_g : 0;
+
   const waterPct = device?.bowl_capacity_ml
-    ? Math.min((reading?.weight_g ?? 0) / device.bowl_capacity_ml, 1)
+    ? Math.min(waterMl / device.bowl_capacity_ml, 1)
     : 0;
 
   const today = new Date().toLocaleDateString('pl-PL', {
@@ -131,8 +135,8 @@ export default function HomeScreen({ route, navigation }) {
         <Text style={s.cardLabel}>Poziom wody w misce</Text>
         <WaterBar pct={waterPct} />
         <View style={s.waterMeta}>
-          <Text style={s.waterVal}>{Math.round(reading?.weight_g ?? 0)} ml</Text>
-          <Text style={s.waterPct}>{Math.round(waterPct * 100)}%</Text>
+          <Text style={s.waterVal}>{calibrated ? `${Math.round(waterMl)} ml` : '0 ml'}</Text>
+          <Text style={s.waterPct}>{calibrated ? `${Math.round(waterPct * 100)}%` : '0 %'}</Text>
         </View>
         <View style={s.statusRow}>
           <StatusChip
