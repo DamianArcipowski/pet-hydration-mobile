@@ -10,26 +10,36 @@ import {
   View,
 } from 'react-native';
 import { API_URL, apiFetch } from '../api';
-import { Panel } from '../components/ui';
 import { colors } from '../theme';
 
 export default function DeviceSettingsScreen({ route, navigation }) {
   const { deviceId } = route.params ?? {};
-  const [device, setDevice] = useState(null);
+  const [devices, setDevices] = useState(null);
+  const [error, setError]     = useState(null);
+  const [expanded, setExpanded] = useState(() => new Set(deviceId ? [deviceId] : []));
 
   useFocusEffect(useCallback(() => {
     (async () => {
       try {
         const res = await apiFetch(`${API_URL}/devices`);
-        if (res.ok) {
-          const devs = await res.json();
-          setDevice(devs.find((d) => d.id === deviceId) ?? null);
-        }
-      } catch {}
+        if (!res.ok) throw new Error();
+        setDevices(await res.json());
+        setError(null);
+      } catch {
+        setError('Nie udało się pobrać urządzeń.');
+      }
     })();
-  }, [deviceId]));
+  }, []));
 
-  if (!device) {
+  function toggle(id) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  if (!devices && !error) {
     return (
       <View style={s.center}>
         <ActivityIndicator color={colors.accent} />
@@ -39,25 +49,53 @@ export default function DeviceSettingsScreen({ route, navigation }) {
 
   return (
     <ScrollView style={s.scroll} contentContainerStyle={s.container}>
-      <Panel style={s.card}>
-        <Text style={s.cardLabel}>Urządzenie</Text>
-        <Text style={s.deviceName}>{device.name || 'Bez nazwy'}</Text>
-        <Text style={s.mac}>{device.mac_address}</Text>
-      </Panel>
+      {error && <Text style={s.error}>{error}</Text>}
+      {devices?.length === 0 && <Text style={s.empty}>Nie masz jeszcze żadnych urządzeń.</Text>}
 
-      <Panel style={s.card}>
-        <Text style={s.cardLabel}>Miska</Text>
-        <Row label="Waga miski"  value={device.bowl_weight_g > 0 ? `${device.bowl_weight_g} g` : 'nieskalibrowana'} />
-        <Row label="Pojemność"   value={`${device.bowl_capacity_ml} ml`} />
-      </Panel>
-
-      <Option
-        icon="swap-horizontal-outline"
-        label="Zmień miskę"
-        sublabel="Nowa kalibracja wagi i pojemności"
-        onPress={() => navigation.navigate('BowlChange', { deviceId })}
-      />
+      {devices?.map((d) => (
+        <DeviceCard
+          key={d.id}
+          device={d}
+          open={expanded.has(d.id)}
+          onToggle={() => toggle(d.id)}
+          onBowlChange={() => navigation.navigate('BowlChange', { deviceId: d.id })}
+        />
+      ))}
     </ScrollView>
+  );
+}
+
+function DeviceCard({ device, open, onToggle, onBowlChange }) {
+  return (
+    <View style={s.card}>
+      <TouchableOpacity style={s.cardHeader} onPress={onToggle} activeOpacity={0.7}>
+        <Ionicons name="water-outline" size={24} color={open ? colors.accent : colors.muted} />
+        <View style={{ flex: 1 }}>
+          <Text style={s.deviceName}>{device.name || 'Bez nazwy'}</Text>
+          <Text style={s.mac}>{device.mac_address}</Text>
+        </View>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={colors.muted} />
+      </TouchableOpacity>
+
+      {open && (
+        <View style={s.cardBody}>
+          <Row
+            label="Waga miski"
+            value={device.bowl_weight_g > 0 ? `${device.bowl_weight_g} g` : 'nieskalibrowana'}
+          />
+          <Row label="Pojemność" value={`${device.bowl_capacity_ml} ml`} />
+
+          <TouchableOpacity style={s.option} onPress={onBowlChange} activeOpacity={0.7}>
+            <Ionicons name="swap-horizontal-outline" size={22} color={colors.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.optionLabel}>Zmień miskę</Text>
+              <Text style={s.optionSub}>Nowa kalibracja wagi i pojemności</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -70,34 +108,24 @@ function Row({ label, value }) {
   );
 }
 
-function Option({ icon, label, sublabel, onPress }) {
-  return (
-    <TouchableOpacity style={s.option} onPress={onPress} activeOpacity={0.7}>
-      <Ionicons name={icon} size={24} color={colors.accent} />
-      <View style={{ flex: 1 }}>
-        <Text style={s.optionLabel}>{label}</Text>
-        {sublabel && <Text style={s.optionSub}>{sublabel}</Text>}
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-    </TouchableOpacity>
-  );
-}
-
 const s = StyleSheet.create({
   scroll:     { flex: 1, backgroundColor: colors.bg },
   container:  { padding: 20, paddingBottom: 40, gap: 12 },
   center:     { flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' },
+  error:      { color: colors.bad, fontSize: 13 },
+  empty:      { color: colors.muted, textAlign: 'center', marginTop: 40, fontSize: 14 },
 
-  card:       {},
-  cardLabel:  { color: colors.muted, fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 },
-  deviceName: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 2 },
+  card:       { backgroundColor: colors.panel, borderRadius: 16, overflow: 'hidden' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
+  deviceName: { color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 2 },
   mac:        { color: colors.muted, fontSize: 12, fontFamily: 'monospace' },
 
+  cardBody:   { paddingHorizontal: 16, paddingBottom: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', paddingTop: 8 },
   row:        { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
   rowLabel:   { color: colors.muted, fontSize: 14 },
   rowValue:   { color: colors.text, fontSize: 14, fontWeight: '600' },
 
-  option:      { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: colors.panel, borderRadius: 16, padding: 16 },
-  optionLabel: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  option:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bg, borderRadius: 12, padding: 14, marginTop: 10 },
+  optionLabel: { color: colors.text, fontSize: 15, fontWeight: '600' },
   optionSub:   { color: colors.muted, fontSize: 12, marginTop: 2 },
 });
