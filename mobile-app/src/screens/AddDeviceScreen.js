@@ -176,7 +176,7 @@ function StepWaiting({ onCancel }) {
         title={`Wykrywam urządzenie${dots}`}
         body="Wróć telefonem do swojej sieci domowej. Aplikacja automatycznie wykryje urządzenie po połączeniu z siecią."
       />
-      <Note text="Zielona dioda na urządzeniu - ESP32 połączył się z siecią." />
+      <Note text="Biała dioda świeci stale na urządzeniu - ESP32 połączył się z siecią." />
       <View style={{ marginTop: 32 }}>
         <Button title="Anuluj" variant="text" onPress={onCancel} />
       </View>

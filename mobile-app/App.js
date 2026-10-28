@@ -15,6 +15,8 @@ import DeviceListScreen from './src/screens/DeviceListScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import StatsScreen from './src/screens/StatsScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import DeviceSettingsScreen from './src/screens/DeviceSettingsScreen';
+import BowlChangeScreen from './src/screens/BowlChangeScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -137,6 +139,16 @@ export default function App() {
                   name="DeviceList"
                   component={DeviceListScreen}
                   options={{ title: 'Moje urządzenia' }}
+                />
+                <Stack.Screen
+                  name="DeviceSettings"
+                  component={DeviceSettingsScreen}
+                  options={{ title: 'Konfiguracja' }}
+                />
+                <Stack.Screen
+                  name="BowlChange"
+                  component={BowlChangeScreen}
+                  options={{ title: 'Zmiana miski' }}
                 />
               </>
             )}

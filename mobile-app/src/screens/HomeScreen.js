@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Panel } from '../components/ui';
 import { colors } from '../theme';
 import { API_URL, apiFetch } from '../api';
@@ -19,6 +19,7 @@ const POLL_MS = 10_000;
 
 export default function HomeScreen({ route, navigation }) {
   const { deviceId } = route.params ?? {};
+  const insets = useSafeAreaInsets();
 
   const [device, setDevice]   = useState(null);
   const [pet, setPet]         = useState(null);
@@ -104,7 +105,7 @@ export default function HomeScreen({ route, navigation }) {
   return (
     <ScrollView
       style={s.scroll}
-      contentContainerStyle={s.container}
+      contentContainerStyle={[s.container, { paddingTop: insets.top + 20 }]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
       }
