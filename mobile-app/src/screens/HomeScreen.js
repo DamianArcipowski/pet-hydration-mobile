@@ -26,6 +26,7 @@ export default function HomeScreen({ route, navigation }) {
   const [reading, setReading] = useState(null);
   const [intake, setIntake]   = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [email, setEmail]     = useState(null);
 
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [petWeightInput, setPetWeightInput]   = useState('');
@@ -59,6 +60,13 @@ export default function HomeScreen({ route, navigation }) {
     const t = setInterval(load, POLL_MS);
     return () => clearInterval(t);
   }, [load]);
+
+  useEffect(() => {
+    apiFetch(`${API_URL}/auth/me`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((me) => me && setEmail(me.email))
+      .catch(() => {});
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -115,6 +123,12 @@ export default function HomeScreen({ route, navigation }) {
       }
     >
 
+      {email && (
+        <View style={s.account}>
+          <Ionicons name="person-circle-outline" size={16} color={colors.muted} />
+          <Text style={s.accountText} numberOfLines={1} ellipsizeMode="middle">{email}</Text>
+        </View>
+      )}
       <View style={s.header}>
         <View>
           <Text style={s.date}>{today}</Text>
@@ -266,6 +280,10 @@ function Tile({ icon, label, sublabel, color = colors.accent, onPress }) {
 const s = StyleSheet.create({
   scroll:        { flex: 1, backgroundColor: colors.bg },
   container:     { padding: 20, paddingBottom: 40 },
+
+  account:       { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', maxWidth: '100%', backgroundColor: colors.panel, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, marginBottom: 16 
+                 },
+  accountText:   { color: colors.muted, fontSize: 12, flexShrink: 1 },
 
   header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
   date:          { color: colors.muted, fontSize: 13, marginBottom: 4 },
