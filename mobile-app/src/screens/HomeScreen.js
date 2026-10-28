@@ -139,13 +139,20 @@ export default function HomeScreen({ route, navigation }) {
           <Text style={s.waterPct}>{calibrated ? `${Math.round(waterPct * 100)}%` : '0 %'}</Text>
         </View>
         <View style={s.statusRow}>
-          <StatusChip
-            icon={reading?.valve_open ? 'water' : 'water-outline'}
-            label={reading?.valve_open ? 'Uzupełnianie' : 'OK'}
-            color={reading?.valve_open ? colors.accent : colors.good}
-          />
-          {reading?.tank_low === 1 && (
+          {reading?.tank_low === 1 ? (
             <StatusChip icon="warning-outline" label="Brak wody w zbiorniku" color={colors.bad} />
+          ) : !calibrated ? (
+            <StatusChip
+              icon={bowlMissing ? 'alert-circle-outline' : 'time-outline'}
+              label={bowlMissing ? 'Brak miski' : 'Oczekiwanie na odczyt'}
+              color={bowlMissing ? colors.warn : colors.muted}
+            />
+          ) : (
+            <StatusChip
+              icon={reading?.valve_open ? 'water' : 'water-outline'}
+              label={reading?.valve_open ? 'Uzupełnianie' : 'OK'}
+              color={reading?.valve_open ? colors.accent : colors.good}
+            />
           )}
         </View>
       </Panel>
