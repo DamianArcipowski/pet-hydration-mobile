@@ -11,7 +11,7 @@ const TARE_TIMEOUT_MS = 30000;
 export default function BowlChangeScreen({ route, navigation }) {
   const { deviceId } = route.params ?? {};
 
-  const [step, setStep]             = useState('intro');
+  const [step, setStep]             = useState('capacity');
   const [oldDevice, setOldDevice]   = useState(null);
   const [liveWeight, setLiveWeight] = useState(null);
   const [capacity, setCapacity]     = useState('');
@@ -54,7 +54,10 @@ export default function BowlChangeScreen({ route, navigation }) {
   useEffect(() => {
     return navigation.addListener('beforeRemove', () => {
       if (started.current && !tareDone.current && oldDevice) {
-        patchDevice({ bowl_weight_g: oldDevice.bowl_weight_g }).catch(() => {});
+        patchDevice({
+          bowl_weight_g:    oldDevice.bowl_weight_g,
+          bowl_capacity_ml: oldDevice.bowl_capacity_ml,
+        }).catch(() => {});
       }
     });
   }, [navigation, oldDevice]);
@@ -74,11 +77,17 @@ export default function BowlChangeScreen({ route, navigation }) {
 
   async function start() {
     setError(null);
+    const ml = parseInt(capacity, 10);
+    if (!ml || ml <= 0) {
+      setError('Podaj pojemność w ml.');
+      return;
+    }
+
     setBusy(true);
     try {
       const latest = await fetchLatest();
       startReadingId.current = latest?.id ?? 0;
-      const res = await patchDevice({ bowl_weight_g: 0 });
+      const res = await patchDevice({ bowl_weight_g: 0, bowl_capacity_ml: ml });
       if (!res.ok) throw new Error();
       started.current = true;
       setLiveWeight(null);
@@ -109,35 +118,16 @@ export default function BowlChangeScreen({ route, navigation }) {
         if (d && d.bowl_weight_g > 0) {
           clearInterval(tarePoll.current);
           tareDone.current = true;
-          setStep('capacity');
+          navigation.goBack();
           return;
         }
       } catch {}
       if (Date.now() > deadline) {
         clearInterval(tarePoll.current);
-        setError(`Urządzenie nie wykryło miski (min. ${BOWL_MIN_G} g). Sprawdź, czy stoi na wadze, i spróbuj ponownie.`);
+        setError(`Urządzenie nie wykryło miski (min. ${BOWL_MIN_G} g). Sprawdź, czy stoi na wadze i spróbuj ponownie.`);
         setStep('place');
       }
     }, POLL_MS);
-  }
-
-  async function saveCapacity() {
-    setError(null);
-    const ml = parseInt(capacity, 10);
-    if (!ml || ml <= 0) {
-      setError('Podaj pojemność w ml.');
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await patchDevice({ bowl_capacity_ml: ml });
-      if (!res.ok) throw new Error();
-      navigation.goBack();
-    } catch {
-      setError('Błąd zapisu. Spróbuj ponownie.');
-    } finally {
-      setBusy(false);
-    }
   }
 
   const bowlReady = liveWeight != null && liveWeight >= BOWL_MIN_G;
@@ -145,52 +135,20 @@ export default function BowlChangeScreen({ route, navigation }) {
   return (
     <ScrollView style={s.scroll} contentContainerStyle={s.container}>
       <Text style={s.stepLabel}>
-        {step === 'capacity' ? 'Krok 2 z 2' : 'Krok 1 z 2'}
+        {step === 'capacity' ? 'Krok 1 z 2' : 'Krok 2 z 2'}
       </Text>
-
-      {step === 'intro' && (
-        <Panel>
-          <Text style={s.title}>Wymiana miski</Text>
-          <Text style={s.text}>
-            Na czas wymiany zawór zostanie zamknięty, a odczyty nie będą liczone do spożycia.
-            Na urządzeniu zapali się biała dioda.
-          </Text>
-          <Text style={s.text}>Zdejmij starą miskę i przygotuj nową, pustą.</Text>
-        </Panel>
-      )}
-
-      {step === 'place' && (
-        <Panel>
-          <Text style={s.title}>Postaw pustą nową miskę</Text>
-          <Text style={s.text}>Odczyt stabilizuje się kilka sekund.</Text>
-          <View style={s.liveBox}>
-            {liveWeight == null ? (
-              <ActivityIndicator color={colors.accent} />
-            ) : (
-              <Text style={[s.liveValue, { color: bowlReady ? colors.good : colors.muted }]}>
-                {Math.round(liveWeight)} g
-              </Text>
-            )}
-            <Text style={s.liveHint}>
-              {bowlReady ? 'Miska wykryta' : `Czekam na miskę (min. ${BOWL_MIN_G} g)`}
-            </Text>
-          </View>
-        </Panel>
-      )}
-
-      {step === 'tare_wait' && (
-        <Panel>
-          <Text style={s.title}>Kalibracja…</Text>
-          <Text style={s.text}>Nie ruszaj miski. To potrwa do kilkunastu sekund.</Text>
-          <ActivityIndicator color={colors.accent} style={{ marginVertical: 24 }} />
-        </Panel>
-      )}
 
       {step === 'capacity' && (
         <>
           <Panel>
             <Text style={s.title}>Pojemność nowej miski</Text>
-            <Text style={s.text}>Ile wody mieści nowa miska?</Text>
+            <Text style={s.text}>
+              Jaka jest pojemność nowej miski?
+            </Text>
+            <Text style={s.text}>
+              Na czas wymiany zawór zostanie zamknięty, a odczyty nie będą liczone do spożycia.
+              Na urządzeniu zapali się biała dioda.
+            </Text>
           </Panel>
           <View style={s.fieldWrap}>
             <Field
@@ -204,13 +162,40 @@ export default function BowlChangeScreen({ route, navigation }) {
         </>
       )}
 
+      {step === 'place' && (
+        <Panel>
+          <Text style={s.title}>Postaw pustą nową miskę</Text>
+          <Text style={s.text}>Zdejmij starą miskę i postaw nową. Odczyt stabilizuje się kilka sekund.</Text>
+          <View style={s.liveBox}>
+            {liveWeight == null ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : (
+              <Text style={[s.liveValue, { color: bowlReady ? colors.good : colors.muted }]}>
+                {Math.round(liveWeight)} g
+              </Text>
+            )}
+            <Text style={s.liveHint}>
+              {bowlReady ? 'Miska wykryta' : `Czekam na miskę (min. ${BOWL_MIN_G} g)`}
+            </Text>
+          </View>
+          <Text style={s.text}>Po kalibracji urządzenie zacznie napełniać nową miskę.</Text>
+        </Panel>
+      )}
+
+      {step === 'tare_wait' && (
+        <Panel>
+          <Text style={s.title}>Kalibracja…</Text>
+          <Text style={s.text}>Nie ruszaj miski. To potrwa do kilkunastu sekund.</Text>
+          <ActivityIndicator color={colors.accent} style={{ marginVertical: 24 }} />
+        </Panel>
+      )}
+
       {error && <Text style={s.error}>{error}</Text>}
 
       <View style={s.actions}>
-        {step === 'intro' && <Button title="Rozpocznij" onPress={start} loading={busy} />}
+        {step === 'capacity' && <Button title="Dalej" onPress={start} loading={busy} />}
         {step === 'place' && <Button title="Kalibruj" onPress={tare} disabled={!bowlReady} />}
-        {step === 'capacity' && <Button title="Zapisz" onPress={saveCapacity} loading={busy} />}
-        {step !== 'tare_wait' && step !== 'capacity' && (
+        {step !== 'tare_wait' && (
           <Button variant="text" title="Anuluj" onPress={() => navigation.goBack()} />
         )}
       </View>

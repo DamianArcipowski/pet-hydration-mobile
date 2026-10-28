@@ -13,7 +13,7 @@ const BOWL_MIN_G = 30;
 
 export default function CalibrationScreen({ route, navigation }) {
   const { deviceId, userId = 1 } = route.params;
-  const [step, setStep] = useState('tare');
+  const [step, setStep] = useState('pet');
   const [tareError, setTareError] = useState(null);
   const [capacity, setCapacity] = useState('');
   const [petName, setPetName] = useState('');
@@ -42,23 +42,32 @@ export default function CalibrationScreen({ route, navigation }) {
 
     await apiFetch(`${API_URL}/devices/${deviceId}/tare`, { method: 'POST' });
 
-    const before = await fetchLatestWeight();
-
     const deadline = Date.now() + TARE_TIMEOUT_MS;
 
     pollRef.current = setInterval(async () => {
-      if (Date.now() > deadline) {
+      const device = await fetchDevice();
+      if (device && device.bowl_weight_g > 0) {
         clearInterval(pollRef.current);
-        setTareError('Nie udało się wykonać tare. Odczekaj 5 sekund i spróbuj ponownie.');
-        setStep('tare');
+        navigation.replace('Home', { deviceId, userId });
         return;
       }
-      const after = await fetchLatestWeight();
-      if (after && after.id !== before?.id) {
+      if (Date.now() > deadline) {
         clearInterval(pollRef.current);
-        setStep('capacity');
+        setTareError(`Urządzenie nie wykryło miski (min. ${BOWL_MIN_G} g). Sprawdź, czy stoi na wadze, i spróbuj ponownie.`);
+        setStep('tare');
       }
     }, TARE_POLL_MS);
+  }
+
+  async function fetchDevice() {
+    try {
+      const res = await apiFetch(`${API_URL}/devices`);
+      if (!res.ok) return null;
+      const devices = await res.json();
+      return devices.find((d) => d.id === deviceId) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   async function fetchLatestWeight() {
@@ -88,7 +97,7 @@ export default function CalibrationScreen({ route, navigation }) {
         body: JSON.stringify({ bowl_capacity_ml: ml }),
       });
       if (!res.ok) throw new Error();
-      setStep('pet');
+      setStep('tare');
     } catch {
       setError('Błąd zapisu. Spróbuj ponownie.');
     } finally {
@@ -117,8 +126,8 @@ export default function CalibrationScreen({ route, navigation }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error();
-      navigation.replace('Home', { deviceId, userId });
+      if (!res.ok && res.status !== 409) throw new Error();
+      setStep('capacity');
     } catch {
       setError('Błąd zapisu. Spróbuj ponownie.');
     } finally {
@@ -137,25 +146,29 @@ export default function CalibrationScreen({ route, navigation }) {
       >
         <View style={s.screen}>
 
-          {step === 'tare' && (
+          {step === 'pet' && (
             <View style={s.card}>
               <Text style={s.title}>Krok 1 z 3</Text>
-              <Text style={s.heading}>Zerowanie wagi</Text>
-              <Text style={s.body}>
-                Połóż pustą miskę na wadze i naciśnij przycisk. Urządzenie wyzeruje wagę miski.
-              </Text>
-              {tareError && <Text style={s.error}>{tareError}</Text>}
-              <TouchableOpacity style={s.btn} onPress={startTare}>
-                <Text style={s.btnText}>Wykonaj Tare</Text>
+              <Text style={s.heading}>Dane zwierzęcia</Text>
+              <TextInput
+                style={s.input}
+                placeholder="Imię zwierzęcia"
+                placeholderTextColor={colors.muted}
+                value={petName}
+                onChangeText={setPetName}
+              />
+              <TextInput
+                style={s.input}
+                placeholder="Waga zwierzęcia w kg (opcjonalnie)"
+                placeholderTextColor={colors.muted}
+                keyboardType="decimal-pad"
+                value={petWeight}
+                onChangeText={setPetWeight}
+              />
+              {error && <Text style={s.error}>{error}</Text>}
+              <TouchableOpacity style={s.btn} onPress={savePet} disabled={saving}>
+                <Text style={s.btnText}>{saving ? 'Zapisywanie…' : 'Dalej'}</Text>
               </TouchableOpacity>
-            </View>
-          )}
-
-          {step === 'tare_wait' && (
-            <View style={s.card}>
-              <ActivityIndicator size="large" color={colors.accent} />
-              <Text style={s.heading}>Oczekiwanie na urządzenie…</Text>
-              <Text style={s.body}>Nie ruszaj miski.</Text>
             </View>
           )}
 
@@ -179,29 +192,25 @@ export default function CalibrationScreen({ route, navigation }) {
             </View>
           )}
 
-          {step === 'pet' && (
+          {step === 'tare' && (
             <View style={s.card}>
               <Text style={s.title}>Krok 3 z 3</Text>
-              <Text style={s.heading}>Dane zwierzęcia</Text>
-              <TextInput
-                style={s.input}
-                placeholder="Imię zwierzęcia"
-                placeholderTextColor={colors.muted}
-                value={petName}
-                onChangeText={setPetName}
-              />
-              <TextInput
-                style={s.input}
-                placeholder="Waga zwierzęcia w kg (opcjonalnie)"
-                placeholderTextColor={colors.muted}
-                keyboardType="decimal-pad"
-                value={petWeight}
-                onChangeText={setPetWeight}
-              />
-              {error && <Text style={s.error}>{error}</Text>}
-              <TouchableOpacity style={s.btn} onPress={savePet} disabled={saving}>
-                <Text style={s.btnText}>{saving ? 'Zapisywanie…' : 'Gotowe'}</Text>
+              <Text style={s.heading}>Zerowanie wagi</Text>
+              <Text style={s.body}>
+                Połóż pustą miskę na wadze i naciśnij przycisk. Urządzenie wyzeruje wagę miski, a potem zacznie ją napełniać.
+              </Text>
+              {tareError && <Text style={s.error}>{tareError}</Text>}
+              <TouchableOpacity style={s.btn} onPress={startTare}>
+                <Text style={s.btnText}>Wykonaj Tare</Text>
               </TouchableOpacity>
+            </View>
+          )}
+
+          {step === 'tare_wait' && (
+            <View style={s.card}>
+              <ActivityIndicator size="large" color={colors.accent} />
+              <Text style={s.heading}>Oczekiwanie na urządzenie…</Text>
+              <Text style={s.body}>Nie ruszaj miski.</Text>
             </View>
           )}
 
