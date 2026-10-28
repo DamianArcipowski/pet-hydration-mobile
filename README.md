@@ -5,8 +5,8 @@ This repository contains the mobile part of a smart pet hydration project.
 
 ## Tech stack
 - Node.js 24.15.0
-- Expo SDK 57
-- React 19.2.3 
+- Expo SDK 58
+- React 19.3.0 
 
 ## How to start
 1. Install **Expo Go** (Google Play / App Store) on your mobile.
