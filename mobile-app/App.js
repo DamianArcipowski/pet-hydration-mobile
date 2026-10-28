@@ -8,6 +8,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { API_URL, apiFetch, clearToken, loadToken, saveToken, setUnauthorizedHandler } from './src/api';
 import { AuthContext } from './src/auth';
 import { colors } from './src/theme';
+import { useTankAlerts } from './src/notifications';
+
 import AddDeviceScreen from './src/screens/AddDeviceScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import CalibrationScreen from './src/screens/CalibrationScreen';
@@ -87,7 +89,9 @@ export default function App() {
 
   const auth = useMemo(() => ({ signIn, signOut }), [signIn, signOut]);
 
-  if (booting || (token && startDeviceId === undefined)) {
+  useTankAlerts(!!token);
+
+    if (booting || (token && startDeviceId === undefined)) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator color={colors.accent} />
