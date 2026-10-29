@@ -192,7 +192,7 @@ function StepTimeout({ onRetry }) {
         title="Nie wykryto urządzenia"
         body="Upłynął limit 2 minut. Upewnij się, że urządzenie jest włączone i zostało poprawnie skonfigurowane."
       />
-      <Note text="Sprawdź czy dioda na ESP32 miga — miganie oznacza tryb konfiguracji WiFi." />
+      <Note text="Sprawdź czy dioda na ESP32 miga - miganie oznacza tryb konfiguracji WiFi." />
       <View style={{ marginTop: 32, gap: 4 }}>
         <Button title="Spróbuj ponownie" onPress={onRetry} />
       </View>
@@ -279,10 +279,7 @@ function StepDots({ current }) {
   );
 }
 
-const getToken = () => null; // TODO
-
 async function pollPendingDevice() {
-  const token = getToken();
   const res = await apiFetch(`${API_URL}/pending-devices`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -292,7 +289,6 @@ async function pollPendingDevice() {
 }
 
 async function claimDevice(mac, name) {
-  const token = getToken();
   const res = await apiFetch(`${API_URL}/pending-devices/claim`, {
     method: 'POST',
     headers: {
@@ -310,9 +306,7 @@ async function checkIncompleteDevice(navigation) {
     const res = await apiFetch(`${API_URL}/devices`);
     if (!res.ok) return;
     const devices = await res.json();
-    const incomplete = devices.find(
-      (d) => !d.bowl_capacity_ml || d.bowl_capacity_ml === 0
-    );
+    const incomplete = devices.find((d) => !d.bowl_weight_g);
     if (incomplete) {
       navigation.replace('Calibration', {
         deviceId: incomplete.id,
