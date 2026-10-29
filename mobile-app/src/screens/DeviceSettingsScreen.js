@@ -59,13 +59,14 @@ export default function DeviceSettingsScreen({ route, navigation }) {
           open={expanded.has(d.id)}
           onToggle={() => toggle(d.id)}
           onBowlChange={() => navigation.navigate('BowlChange', { deviceId: d.id })}
+          onWifiChange={() => navigation.navigate('WifiChange', { deviceId: d.id })}
         />
       ))}
     </ScrollView>
   );
 }
 
-function DeviceCard({ device, open, onToggle, onBowlChange }) {
+function DeviceCard({ device, open, onToggle, onBowlChange, onWifiChange }) {
   return (
     <View style={s.card}>
       <TouchableOpacity style={s.cardHeader} onPress={onToggle} activeOpacity={0.7}>
@@ -85,17 +86,34 @@ function DeviceCard({ device, open, onToggle, onBowlChange }) {
           />
           <Row label="Pojemność" value={`${device.bowl_capacity_ml} ml`} />
 
-          <TouchableOpacity style={s.option} onPress={onBowlChange} activeOpacity={0.7}>
-            <Ionicons name="swap-horizontal-outline" size={22} color={colors.accent} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.optionLabel}>Zmień miskę</Text>
-              <Text style={s.optionSub}>Nowa kalibracja wagi i pojemności</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-          </TouchableOpacity>
+          <Option
+            icon="swap-horizontal-outline"
+            label="Zmień miskę"
+            sublabel="Nowa kalibracja wagi i pojemności"
+            onPress={onBowlChange}
+          />
+          <Option
+            icon="wifi-outline"
+            label="Zmień sieć Wi-Fi"
+            sublabel="Zmienia jedynie sieć, pozostałe ustawienia zostają"
+            onPress={onWifiChange}
+          />
         </View>
       )}
     </View>
+  );
+}
+
+function Option({ icon, label, sublabel, onPress }) {
+  return (
+    <TouchableOpacity style={s.option} onPress={onPress} activeOpacity={0.7}>
+      <Ionicons name={icon} size={22} color={colors.accent} />
+      <View style={{ flex: 1 }}>
+        <Text style={s.optionLabel}>{label}</Text>
+        <Text style={s.optionSub}>{sublabel}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+    </TouchableOpacity>
   );
 }
 

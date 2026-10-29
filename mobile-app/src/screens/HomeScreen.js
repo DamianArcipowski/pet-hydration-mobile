@@ -130,11 +130,19 @@ export default function HomeScreen({ route, navigation }) {
         </View>
       )}
       <View style={s.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={s.date}>{today}</Text>
-          <Text style={s.petName}>{pet?.name ?? device?.name ?? '-'}</Text>
+          <Text style={s.petName}>{pet?.name ?? device?.name ?? '—'}</Text>
         </View>
-        <StatusDot reading={reading} />
+        <View style={s.connection}>
+          {device?.wifi_ssid && (
+            <>
+              <Ionicons name="wifi" size={14} color={colors.muted} />
+              <Text style={s.ssid} numberOfLines={1}>{device.wifi_ssid}</Text>
+            </>
+          )}
+          <StatusDot reading={reading} />
+        </View>
       </View>
 
       <Panel style={s.intakeCard}>
@@ -288,7 +296,9 @@ const s = StyleSheet.create({
   header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
   date:          { color: colors.muted, fontSize: 13, marginBottom: 4 },
   petName:       { color: colors.text, fontSize: 26, fontWeight: '700' },
-  dot:           { width: 12, height: 12, borderRadius: 6, marginTop: 8 },
+  dot:           { width: 12, height: 12, borderRadius: 6 },
+  connection:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, marginLeft: 12, maxWidth: '45%' },
+  ssid:          { color: colors.muted, fontSize: 12, flexShrink: 1 },
 
   cardLabel:     { color: colors.muted, fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 },
 

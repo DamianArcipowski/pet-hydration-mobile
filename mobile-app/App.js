@@ -19,6 +19,7 @@ import StatsScreen from './src/screens/StatsScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import DeviceSettingsScreen from './src/screens/DeviceSettingsScreen';
 import BowlChangeScreen from './src/screens/BowlChangeScreen';
+import WifiChangeScreen from './src/screens/WifiChangeScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -153,6 +154,11 @@ export default function App() {
                   name="BowlChange"
                   component={BowlChangeScreen}
                   options={{ title: 'Zmiana miski' }}
+                />
+                <Stack.Screen
+                  name="WifiChange"
+                  component={WifiChangeScreen}
+                  options={{ title: 'Zmiana sieci Wi-Fi' }}
                 />
               </>
             )}
